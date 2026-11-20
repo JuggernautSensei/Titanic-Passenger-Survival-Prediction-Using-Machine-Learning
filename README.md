@@ -12,19 +12,19 @@
   <img src="Resources/Thumbnail.png" alt="타이타닉 생존 예측 — 데이터 분석과 머신러닝 프로젝트" width="100%">
 </p>
 
+데이터를 살펴보고, 예측에 사용할 특징을 구성하고, 여러 머신러닝 모델을 비교한 데이터사이언스 수업 텀 프로젝트입니다.
+
+타이타닉 승객의 객실 등급, 성별, 나이, 동승 가족 정보 등을 이용해 생존 여부를 예측했습니다. 데이터를 처음 확인하는 단계부터 결측치 처리, 탐색적 데이터 분석, 피처 엔지니어링, 모델 학습과 비교, 최종 예측 파일 생성까지 하나의 노트북에서 진행했습니다.
+
+사용 기술은 Python, pandas, NumPy, Matplotlib, seaborn, scikit-learn이며, 분석 코드는 [`Notebook/titanic.ipynb`](Notebook/titanic.ipynb)에 있습니다.
+
 ## Contents
 
-- [프로젝트 소개](#프로젝트-소개)
 - [데이터 구성과 예측 목표](#데이터-구성과-예측-목표)
 - [결측치 처리](#결측치-처리)
 - [탐색적 데이터 분석](#탐색적-데이터-분석)
 - [피처 엔지니어링](#피처-엔지니어링)
 - [모델 학습 및 비교](#모델-학습-및-비교)
-- [노트북 실행](#노트북-실행)
-
-## 프로젝트 소개
-
-타이타닉 승객의 객실 등급, 성별, 나이, 동승 가족 정보로 생존 여부를 예측하는 데이터사이언스 수업 프로젝트입니다. [분석 노트북](Notebook/titanic.ipynb)에서 승객 집단별 생존율을 살펴보고, 같은 학습 데이터로 여러 분류 모델을 비교합니다. 마지막에는 생존 여부가 공개되지 않은 승객 418명의 예측값을 CSV 파일로 저장합니다.
 
 ## 데이터 구성과 예측 목표
 
@@ -75,7 +75,7 @@
 
 ## 탐색적 데이터 분석
 
-데이터의 내용을 이해하기 위해 통계와 그래프를 확인하는 탐색적 데이터 분석을 진행했습니다. [상관관계 히트맵](Resources/01_CorrelationHeatmap.png)으로 숫자형 열 사이의 관계를 살펴봤습니다.
+데이터의 내용을 이해하기 위해 통계와 그래프를 확인하는 탐색적 데이터 분석을 진행했습니다. 먼저 아래 [상관관계 히트맵](Resources/01_CorrelationHeatmap.png)으로 숫자형 열 사이의 관계를 살펴봤습니다.
 
 <p align="center">
   <img src="Resources/01_CorrelationHeatmap.png" alt="프로젝트에서 분석한 승객 정보와 생존 여부의 상관관계 히트맵" width="760">
@@ -84,6 +84,13 @@
 `Survived`와 `Pclass`의 상관계수는 약 `-0.34`, `Fare`와는 약 `0.26`으로 나타났습니다. 객실 등급은 숫자가 작을수록 높으므로, 이 데이터에서는 높은 객실 등급과 높은 요금이 생존 여부와 관련되는 방향을 보였습니다. 다만 이 값만으로 생존의 원인을 설명할 수는 없고, 이 시점의 히트맵에는 문자열로 저장된 성별과 탑승항도 포함되어 있지 않습니다.
 
 이어서 객실 등급, 성별, 동승 가족 수별로 묶어 생존율을 비교했습니다. `Survived`가 `0`과 `1`로 표현되어 있어, 각 집단에서 이 열의 평균을 구하면 해당 집단의 생존 비율이 됩니다.
+
+```python
+train[['Pclass', 'Survived']] \
+    .groupby('Pclass', as_index=False) \
+    .mean() \
+    .sort_values(by='Survived', ascending=False)
+```
 
 나이에 대해서는 생존자와 사망자의 분포를 나누어 보고, 다시 객실 등급별로 나눠 살펴봤습니다. 나이 전체를 한 번에 보는 것에 더해, 등급이라는 조건을 함께 놓고 분포를 확인했습니다. 이 그래프들은 [나이와 생존 여부](Resources/02_AgeBySurvival.png), [객실 등급별 나이와 생존 여부](Resources/03_AgeByPclassSurvival.png)에 정리되어 있습니다. 앞에서 결측 나이를 중앙값으로 채웠으므로 이 분포에는 대체한 값도 포함됩니다.
 
@@ -99,7 +106,7 @@
 
 분석한 데이터를 모델에 넣기 위해 필요한 정보를 추출하고 변환하는 피처 엔지니어링을 진행했습니다. 여기서 피처는 모델이 예측의 근거로 사용하는 입력 변수입니다.
 
-### 이름과 호칭
+### 이름에서 호칭 추출
 
 이름 전체를 그대로 사용하지 않고 `Mr`, `Miss`, `Mrs`, `Master`와 같은 호칭을 추출해 `Title`을 만들었습니다. 드물게 등장하는 여러 호칭은 `Rare`로 묶었고, `Mlle`와 `Ms`는 `Miss`로, `Mme`는 `Mrs`로 통합했습니다. 이후 호칭을 숫자로 대응시켰습니다.
 
@@ -111,10 +118,7 @@
 
 ```python
 train['FamilySize'] = train['SibSp'] + train['Parch'] + 1
-test['FamilySize'] = test['SibSp'] + test['Parch'] + 1
-
 train['IsAlone'] = (train['FamilySize'] == 1).astype(int)
-test['IsAlone'] = (test['FamilySize'] == 1).astype(int)
 ```
 
 앞선 분석에서는 `SibSp`와 `Parch`를 각각 묶어 생존율을 살펴봤습니다. 입력을 구성할 때는 이 두 정보를 합쳐, `FamilySize`로 가족의 전체 규모를 표현하고 `IsAlone`으로 동승 가족이 없는지를 구분했습니다. 이후 원래 `SibSp`, `Parch` 열은 제거했고, 테스트 데이터에도 같은 계산을 적용했습니다.
@@ -123,7 +127,7 @@ test['IsAlone'] = (test['FamilySize'] == 1).astype(int)
 
 나이는 `pd.cut(..., 5)`로 값의 범위를 다섯 구간으로 나누어 `AgeBand`를 만들었습니다. 요금은 `pd.qcut(..., 4)`로 각 구간에 비슷한 수의 승객이 들어가도록 네 구간으로 나누어 `FareBand`를 만들었습니다. 두 열에는 구간 번호를 저장하고, 원래 `Age`, `Fare` 열은 제거했습니다.
 
-연속적인 숫자를 구간으로 바꾸면 개별 값의 세밀한 차이는 사라지지만, 비슷한 범위의 승객을 같은 범주로 표현할 수 있습니다.
+연속적인 숫자를 구간으로 바꾸면 개별 값의 세밀한 차이는 사라지지만, 비슷한 범위의 승객을 같은 범주로 표현할 수 있습니다. 
 
 마지막으로 성별과 탑승항을 숫자로 변환했습니다. 최종 학습 입력은 다음 8개 열입니다.
 
@@ -211,12 +215,14 @@ test['IsAlone'] = (test['FamilySize'] == 1).astype(int)
 
 기록된 학습 정확도에서는 결정 트리와 랜덤 포레스트가 같은 값으로 가장 높았습니다. 최종 예측 파일에는 랜덤 포레스트의 결과를 사용했습니다. 테스트 승객의 `PassengerId`와 예측한 `Survived`를 연결해 `submission.csv`로 저장했습니다.
 
+```python
+submission = pd.DataFrame({
+    'PassengerId': test['PassengerId'],
+    'Survived': Y_pred
+})
+submission.to_csv('submission.csv', index=False)
+```
+
 노트북을 위에서부터 실행하면 마지막으로 `Y_pred`에 들어가는 값이 랜덤 포레스트의 예측입니다. 최종 파일은 테스트 승객 418명의 식별 번호와 예측 결과를 담는 형태입니다.
 
 다만 학습에 사용한 데이터를 다시 평가했으므로, 이 비교만으로 새로운 승객에 대한 예측 성능까지 판단할 수는 없습니다.
-
-## 노트북 실행
-
-1. Python과 Jupyter 환경에 노트북에서 사용하는 pandas, NumPy, Matplotlib, seaborn, scikit-learn을 설치합니다.
-2. [Kaggle Titanic 데이터](https://www.kaggle.com/competitions/titanic/data)의 `train.csv`, `test.csv`, `gender_submission.csv`를 노트북과 같은 폴더에 둡니다.
-3. Jupyter에서 `titanic.ipynb`를 열고 셀을 위에서부터 실행합니다. 마지막 코드 셀이 예측 결과를 `submission.csv`로 저장합니다.
