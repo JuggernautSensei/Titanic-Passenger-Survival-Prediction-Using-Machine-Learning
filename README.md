@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/pandas-150458?logo=pandas&logoColor=white" alt="pandas">
 </p>
 
-![타이타닉 생존 예측 프로젝트 표지](Resources/Thumbnail.png)
+<p align="center"><img src="Resources/Thumbnail.png" alt="타이타닉 생존 예측 프로젝트 표지"></p>
 
 ## Contents
 
